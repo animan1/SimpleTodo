@@ -1,6 +1,7 @@
 package com.codepath.simpletodo;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.View;
@@ -16,9 +17,11 @@ import java.util.ArrayList;
 
 public class ToDoActivity extends Activity {
 
+  private final int EDIT_TEXT_REQUEST_CODE = 1;
+  private final String POSITION = "position";
   private ArrayList<String> items;
   private ArrayAdapter<String> itemsAdapter;
-  ListView lvItems;
+  private ListView lvItems;
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -37,11 +40,24 @@ public class ToDoActivity extends Activity {
       @Override
       public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
         items.remove(position);
-        itemsAdapter.notifyDataSetChanged();
-        writeItems();
+        itemsChanged();
         return true;
       }
     });
+    lvItems.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+      @Override
+      public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+        Intent i = new Intent(ToDoActivity.this, EditItemActivity.class);
+        i.putExtra(EditItemActivity.ITEM, items.get(position));
+        i.putExtra(POSITION, position);
+        startActivityForResult(i, EDIT_TEXT_REQUEST_CODE);
+      }
+    });
+  }
+
+  private void itemsChanged() {
+    itemsAdapter.notifyDataSetChanged();
+    writeItems();
   }
 
   @Override
@@ -78,6 +94,22 @@ public class ToDoActivity extends Activity {
       FileUtils.writeLines(todoFile, items);
     } catch (IOException e) {
       e.printStackTrace();
+    }
+  }
+
+  @Override
+  protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+    if (resultCode == RESULT_OK && requestCode == EDIT_TEXT_REQUEST_CODE) {
+      String itemText = data.getStringExtra(EditItemActivity.ITEM).trim();
+      int position = data.getIntExtra(POSITION, -1);
+      if ((itemText == null) || itemText.isEmpty() || (position == -1) || (position >= items.size())) {
+        return;
+      }
+
+      items.set(position, itemText);
+      itemsChanged();
+    } else {
+      super.onActivityResult(requestCode, resultCode, data);
     }
   }
 }
